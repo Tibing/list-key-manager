@@ -1,31 +1,108 @@
-import { Component } from '@angular/core';
+import { AfterContentInit, Component, ContentChildren, HostListener, Input, QueryList } from '@angular/core';
+import { ActiveDescendantKeyManager, Highlightable } from '@angular/cdk/a11y';
+import { Article, NEWS } from './news';
+import { animate, style, transition, trigger } from '@angular/animations';
+
+@Component({
+  selector: 'app-list-item',
+  styles: [`
+    :host {
+      display: block;
+      margin: 1rem;
+    }
+  `],
+  template: `
+    <span>{{ article.title }}</span>
+    <div @details *ngIf="active">
+      {{ article.text }}
+      <a [href]="article.link">Read More</a>
+    </div>
+  `,
+  animations: [
+    trigger('details', [
+
+      transition(':enter', [
+        style({
+          opacity: 0,
+          transform: 'translate3d(-100px, 0, 0)',
+          height: 0,
+        }),
+        animate(300, style({
+          opacity: 1,
+          transform: 'translate3d(0, 0, 0)',
+          height: '60px',
+        })),
+      ]),
+
+      transition(':leave', [
+        style({
+          opacity: 1,
+          transform: 'translate3d(0, 0, 0)',
+          height: '60px',
+        }),
+        animate(300, style({
+          opacity: 0,
+          transform: 'translate3d(-100px, 0, 0)',
+          height: 0,
+        })),
+      ]),
+
+    ]),
+  ],
+})
+export class ListItem implements Highlightable {
+  disabled: boolean;
+  active = false;
+
+  @Input() article: Article;
+
+  getLabel(): string {
+    return this.article.title;
+  }
+
+  setActiveStyles(): void {
+    this.active = true;
+  }
+
+  setInactiveStyles(): void {
+    this.active = false;
+  }
+}
+
+@Component({
+  selector: 'app-list',
+  styles: [`
+    :host {
+      outline: none;
+    }
+  `],
+  template: `
+    <ng-content></ng-content>
+  `,
+  host: { 'tabindex': '1' },
+})
+export class List implements AfterContentInit {
+  @ContentChildren(ListItem, { descendants: true }) items: QueryList<ListItem>;
+  private keyManager: ActiveDescendantKeyManager<ListItem>;
+
+  @HostListener('keydown', ['$event'])
+  manage(event) {
+    this.keyManager.onKeydown(event);
+  }
+
+  ngAfterContentInit(): void {
+    this.keyManager = new ActiveDescendantKeyManager(this.items).withWrap();
+  }
+}
 
 @Component({
   selector: 'app-root',
   template: `
-    <!--The content below is only a placeholder and can be replaced.-->
-    <div style="text-align:center">
-      <h1>
-        Welcome to {{title}}!
-      </h1>
-      <img width="300" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNTAgMjUwIj4KICAgIDxwYXRoIGZpbGw9IiNERDAwMzEiIGQ9Ik0xMjUgMzBMMzEuOSA2My4ybDE0LjIgMTIzLjFMMTI1IDIzMGw3OC45LTQzLjcgMTQuMi0xMjMuMXoiIC8+CiAgICA8cGF0aCBmaWxsPSIjQzMwMDJGIiBkPSJNMTI1IDMwdjIyLjItLjFWMjMwbDc4LjktNDMuNyAxNC4yLTEyMy4xTDEyNSAzMHoiIC8+CiAgICA8cGF0aCAgZmlsbD0iI0ZGRkZGRiIgZD0iTTEyNSA1Mi4xTDY2LjggMTgyLjZoMjEuN2wxMS43LTI5LjJoNDkuNGwxMS43IDI5LjJIMTgzTDEyNSA1Mi4xem0xNyA4My4zaC0zNGwxNy00MC45IDE3IDQwLjl6IiAvPgogIDwvc3ZnPg==">
-    </div>
-    <h2>Here are some links to help you start: </h2>
-    <ul>
-      <li>
-        <h2><a target="_blank" rel="noopener" href="https://angular.io/tutorial">Tour of Heroes</a></h2>
-      </li>
-      <li>
-        <h2><a target="_blank" rel="noopener" href="https://angular.io/cli">CLI Documentation</a></h2>
-      </li>
-      <li>
-        <h2><a target="_blank" rel="noopener" href="https://blog.angular.io/">Angular blog</a></h2>
-      </li>
-    </ul>
-    
+    <app-list>
+      <app-list-item *ngFor="let article of articles" [article]="article"></app-list-item>
+    </app-list>
   `,
-  styles: []
 })
 export class AppComponent {
-  title = 'doing-a11y-easily';
+  articles = NEWS;
 }
